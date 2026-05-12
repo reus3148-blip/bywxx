@@ -6,8 +6,7 @@ import { defineConfig, fontProviders } from 'astro/config';
 
 // https://astro.build/config
 export default defineConfig({
-	site: 'https://reus3148-blip.github.io',
-	base: '/bywxx',
+	site: 'https://bywxx.blundermate.app',
 	integrations: [mdx(), sitemap()],
 	fonts: [
 		{
