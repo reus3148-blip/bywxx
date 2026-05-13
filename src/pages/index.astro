@@ -1,8 +1,24 @@
 ---
+import { Image } from 'astro:assets';
+import { getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
+import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+
+const posts = (await getCollection('blog')).sort(
+	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+const recent = posts.slice(0, 6);
+
+// Build category list with counts
+const categoryMap = new Map<string, number>();
+for (const post of posts) {
+	const cat = post.data.category || '일상';
+	categoryMap.set(cat, (categoryMap.get(cat) || 0) + 1);
+}
+const categories = [...categoryMap.entries()].sort((a, b) => b[1] - a[1]);
 ---
 
 <!doctype html>
@@ -13,16 +29,212 @@ import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
 	<body>
 		<Header />
 		<main>
-			<h1>안녕하세요, bywxx입니다 👋</h1>
-			<p>
-				이곳은 제 개인 홈페이지이자 블로그입니다. 배우고 만든 것들을 차곡차곡
-				기록해 두는 공간이에요.
-			</p>
-			<p>
-				최근 글은 <a href="/blog/">블로그</a>에서 볼 수 있고, 저에 대한 소개는
-				<a href="/about/">About</a>에서 확인하실 수 있습니다.
-			</p>
+			<section class="hero">
+				<div class="container hero-inner">
+					<h1>안녕하세요, bywxx입니다 👋</h1>
+					<p class="hero-desc">
+						배우고 만든 것들을 차곡차곡 기록해 두는 공간이에요. 천천히, 그러나 꾸준히.
+					</p>
+				</div>
+			</section>
+
+			{categories.length > 0 && (
+				<section class="container category-row">
+					<a href="/blog/" class="chip chip-active">전체 ({posts.length})</a>
+					{categories.map(([name, count]) => (
+						<a href={`/blog/?category=${encodeURIComponent(name)}`} class="chip">
+							{name} ({count})
+						</a>
+					))}
+				</section>
+			)}
+
+			<section class="container posts-section">
+				<div class="section-head">
+					<h2>최근 글</h2>
+					<a href="/blog/" class="more">전체 보기 →</a>
+				</div>
+
+				<ul class="post-grid">
+					{recent.map((post) => (
+						<li class="post-card">
+							<a href={`/blog/${post.id}/`}>
+								{post.data.heroImage && (
+									<div class="thumb">
+										<Image width={640} height={360} src={post.data.heroImage} alt="" />
+									</div>
+								)}
+								<div class="meta">
+									<span class="cat">{post.data.category || '일상'}</span>
+									<span class="dot">·</span>
+									<FormattedDate date={post.data.pubDate} />
+								</div>
+								<h3 class="title">{post.data.title}</h3>
+								<p class="excerpt">{post.data.description}</p>
+								{post.data.tags && post.data.tags.length > 0 && (
+									<div class="tags">
+										{post.data.tags.slice(0, 3).map((t) => (
+											<span class="tag">#{t}</span>
+										))}
+									</div>
+								)}
+							</a>
+						</li>
+					))}
+				</ul>
+			</section>
 		</main>
 		<Footer />
 	</body>
 </html>
+
+<style>
+	.hero {
+		padding: 60px 0 24px;
+	}
+	.hero-inner h1 {
+		font-size: 2rem;
+		margin: 0 0 12px;
+		letter-spacing: -0.03em;
+	}
+	.hero-desc {
+		color: var(--muted);
+		font-size: 1.05rem;
+		margin: 0;
+		max-width: 620px;
+	}
+
+	.category-row {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+		padding-top: 8px;
+		padding-bottom: 8px;
+	}
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		padding: 6px 14px;
+		background: var(--line-soft);
+		color: var(--ink-soft);
+		border-radius: 999px;
+		font-size: 0.88rem;
+		font-weight: 500;
+		transition: background 0.15s ease, color 0.15s ease;
+	}
+	.chip:hover {
+		background: var(--line);
+		color: var(--ink);
+	}
+	.chip-active {
+		background: var(--ink);
+		color: #fff;
+	}
+	.chip-active:hover {
+		background: var(--ink);
+		color: #fff;
+	}
+
+	.posts-section {
+		padding-top: 24px;
+		padding-bottom: 24px;
+	}
+	.section-head {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		margin-bottom: 24px;
+	}
+	.section-head h2 {
+		margin: 0;
+		font-size: 1.4rem;
+	}
+	.more {
+		color: var(--muted);
+		font-size: 0.92rem;
+	}
+	.more:hover {
+		color: var(--ink);
+	}
+
+	.post-grid {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 32px 28px;
+	}
+	.post-card a {
+		display: block;
+		color: var(--ink-soft);
+	}
+	.post-card a:hover .title {
+		color: var(--accent);
+	}
+	.thumb {
+		overflow: hidden;
+		border-radius: var(--radius-lg);
+		margin-bottom: 14px;
+		aspect-ratio: 16 / 9;
+		background: var(--line-soft);
+	}
+	.thumb :global(img) {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		border-radius: 0;
+		transition: transform 0.3s ease;
+	}
+	.post-card a:hover .thumb :global(img) {
+		transform: scale(1.03);
+	}
+	.meta {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		color: var(--muted);
+		font-size: 0.85rem;
+		margin-bottom: 8px;
+	}
+	.cat {
+		color: var(--accent);
+		font-weight: 600;
+	}
+	.dot { color: var(--muted-soft); }
+	.title {
+		margin: 0 0 8px;
+		font-size: 1.2rem;
+		color: var(--ink);
+		line-height: 1.4;
+		transition: color 0.15s ease;
+	}
+	.excerpt {
+		margin: 0 0 10px;
+		color: var(--muted);
+		font-size: 0.95rem;
+		line-height: 1.6;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.tags {
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+	.tag {
+		color: var(--muted);
+		font-size: 0.82rem;
+	}
+
+	@media (max-width: 720px) {
+		.hero { padding: 32px 0 16px; }
+		.hero-inner h1 { font-size: 1.6rem; }
+		.post-grid {
+			grid-template-columns: 1fr;
+			gap: 28px;
+		}
+	}
+</style>
